@@ -3,7 +3,7 @@ import sdl2
 from ..ecs.world import World
 from ..platform.input import Input
 from ..platform.window import Window
-from ..render.camera import look_at, perspective
+from ..render.camera import Camera
 from ..render.renderer import Renderer
 from .loop import GameLoop
 
@@ -14,11 +14,7 @@ class App:
         self.input = Input()
         self.world = World()
         self.renderer = Renderer(self.window.ctx)
-
-        # Câmera 3D padrão olhando do eixo Z para a origem
-        self.view = look_at((0.0, 0.0, 3.0), (0.0, 0.0, 0.0), (0.0, 1.0, 0.0))
-        self.proj = perspective(60.0, width / height, 0.1, 100.0)
-        self.renderer.set_camera(self.view, self.proj)
+        self.camera = Camera()
 
         self.systems: list = []
         self.loop = GameLoop(
@@ -29,16 +25,18 @@ class App:
         )
 
     def add_system(self, system) -> None:
-        """Sistemas recebem (app, dt) e rodam em ordem de registro."""
         self.systems.append(system)
 
     def _update(self, dt: float) -> None:
+        if self.input.just_pressed(sdl2.SDLK_TAB):
+            self.camera.toggle_mode()
         for system in self.systems:
             system(self, dt)
 
     def _render(self, alpha: float) -> None:
         self.renderer.begin()
-        self.renderer.draw_world(self.world)
+        aspect = self.window.width / self.window.height
+        self.renderer.draw_world(self.world, self.camera, aspect)
         self.window.swap()
 
     def run(self) -> None:
